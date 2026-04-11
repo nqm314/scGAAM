@@ -86,6 +86,7 @@ def GraphConstruction(data, features, num_clusters):
 
     return G
 
+
 #------------------------------------------------------------------
 def normalization(features_):
     features = features_.copy()
@@ -94,6 +95,7 @@ def normalization(features_):
     features = np.log2(features + 1)
     return features
 
+    
 def dominateset(aff_matrix, NR_OF_KNN):
     thres = np.sort(aff_matrix)[:, -NR_OF_KNN]
     aff_matrix.T[aff_matrix.T < thres] = 0
@@ -209,6 +211,7 @@ def normalize(adata, copy=True, highly_genes = None, filter_min_counts=True,
 
     return adata
 
+    
 #---------------Reading files .h file 2----------------------------------------#
 def load_h5_data2(data_path, is_NE=False, n_clusters=20, K=None):
     mat, obs, var, uns = read_data(data_path, sparsify=False, skip_exprs=False)
@@ -224,6 +227,7 @@ def load_h5_data2(data_path, is_NE=False, n_clusters=20, K=None):
     X =X.astype('float32')
     X=preprocess(X, nb_genes=2000)
     return X, Y
+
 
 def empty_safe(fn, dtype):
     def _fn(x):
@@ -280,6 +284,7 @@ def dict_from_group(group):
         d[key] = value
     return d
 
+
 #-----------------------------------------------------------------------------
 #Graph augmentation
 
@@ -320,7 +325,7 @@ def GeneDropping(x, drop_prob):
 #-----------------------------------------------------------------------------
 
 def GraphAdversarialAttack(model, adj_sub, adj_aug, x_sub, x_aug, iters, node_ratio, alpha, beta, principal_components):
-    """ PGD attack on both features and edges"""
+    """ PGD attack on features only"""
 
     for param in  model.parameters():
         param.requires_grad = False
@@ -354,7 +359,8 @@ def GraphAdversarialAttack(model, adj_sub, adj_aug, x_sub, x_aug, iters, node_ra
     adj_aug = torch.clamp(adj_aug, 0, 1)
     return adj_aug, x_hat
     # return A_hat_clamped, x_hat
-    
+
+
 def bisection(a,eps,xi,ub=1):
     pa = torch.clamp(a, 0, ub)
     if torch.sum(pa) <= eps:
