@@ -47,12 +47,9 @@ def GraphConstruction(data, features, num_clusters):
 
     source_nodes = np.repeat(np.arange(cell_num), neighbor_num)
     target_nodes = indices.flatten()
-    # Tính similarity làm trọng số (quan trọng cho Soft-Attack của cậu)
-    edge_weights = 1.0 - dists.flatten()
 
     # Chuyển sang Tensor
     edge_index = torch.tensor(np.array([source_nodes, target_nodes]), dtype=torch.long)
-    edge_attr = torch.tensor(edge_weights, dtype=torch.float)
 
     adj_mat = np.zeros((cell_num, cell_num))
     for i in range(cell_num*neighbor_num):
@@ -65,11 +62,6 @@ def GraphConstruction(data, features, num_clusters):
     for i in range(n_samples):
         for j in indices[i]:
              adj_matrix[i, j] = 1  
-
-    if not np.array_equal(adj_mat, adj_matrix):
-        print("Different adj_mat and adj_matrix")
-        print("Adj_mat: ", adj_mat)
-        print("Adj_matrix: ", adj_matrix)
 
     #Create a list of egdes
     edge_list = torch.empty((2,0), dtype=torch.int64)
@@ -95,39 +87,6 @@ def GraphConstruction(data, features, num_clusters):
     return G
 
 #------------------------------------------------------------------
-def normalize_adj_tensor(adj):
-    """Symmetrically normalize adjacency tensor."""
-    rowsum = torch.sum(adj,1) + 1e-8
-    d_inv_sqrt = torch.pow(rowsum, -0.5)
-    d_inv_sqrt[d_inv_sqrt == float("Inf")] = 0.
-    d_mat_inv_sqrt = torch.diag(d_inv_sqrt)
-    return torch.mm(torch.mm(adj,d_mat_inv_sqrt).transpose(0,1),d_mat_inv_sqrt)
-
-def normalize_adj_tensor_sp(adj):
-    """Symmetrically normalize sparse adjacency tensor."""
-    device = adj.device
-    adj = adj.to("cpu")
-    rowsum = torch.spmm(adj, torch.ones((adj.size(0),1))).reshape(-1)
-    d_inv_sqrt = torch.pow(rowsum, -0.5)
-    d_inv_sqrt[d_inv_sqrt == float("Inf")] = 0.
-    d_mat_inv_sqrt = torch.diag(d_inv_sqrt)
-    adj = torch.mm(torch.smm(adj.transpose(0,1),d_mat_inv_sqrt.transpose(0,1)),d_mat_inv_sqrt)
-    return adj.to(device)
-
-def edge2adj(x, edge_index):
-    """Convert edge index to adjacency matrix"""
-    num_nodes = x.shape[0]
-    tmp, _ = add_self_loops(edge_index, num_nodes=num_nodes)
-    edge_weight = torch.ones(tmp.size(1), dtype=None,
-                                     device=edge_index.device)
-    row, col = tmp[0], tmp[1]
-    deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
-    deg_inv_sqrt = deg.pow_(-0.5)
-    deg_inv_sqrt.masked_fill_(deg_inv_sqrt == float('inf'), 0)
-    edge_weight = deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
-    #return torch.sparse.FloatTensor(tmp, edge_weight,torch.Size((num_nodes, num_nodes)))
-    return torch.sparse_coo_tensor(tmp, edge_weight, torch.Size((num_nodes, num_nodes)))
-
 def normalization(features_):
     features = features_.copy()
     for i in range(len(features)):
@@ -359,124 +318,6 @@ def GeneDropping(x, drop_prob):
 
 
 #-----------------------------------------------------------------------------
-class GCNConv(Module):
-    def __init__(self, in_features, out_features, bias=True):
-        super(GCNConv, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.weight = Parameter(torch.FloatTensor(in_features, out_features))
-        if bias:
-            self.bias = Parameter(torch.FloatTensor(out_features))
-        else:
-            self.register_parameter('bias', None)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        stdv = 1. / math.sqrt(self.weight.size(1))
-        self.weight.data.uniform_(-stdv, stdv)
-        if self.bias is not None:
-            self.bias.data.uniform_(-stdv, stdv)
-
-    def forward(self, input, adj):
-        support = torch.mm(input, self.weight)
-        output = torch.spmm(adj, support)
-        if self.bias is not None:
-            return output + self.bias
-        else:
-            return output
-
-    def __repr__(self):
-        return self.__class__.__name__ + ' (' \
-               + str(self.in_features) + ' -> ' \
-               + str(self.out_features) + ')'
-    
-#-----------------------------------------------------------------------------
-# def GraphAdversarialAttack(model, adj_sub, adj_aug, x_sub, x_aug, iters, node_ratio, alpha, beta, principal_components):
-#     """ PGD attack on both features and edges"""
-
-#     for param in  model.parameters():
-#         param.requires_grad = False
-#     model.eval()
-#     device = x_sub.device
-#     total_edges = torch.sum(adj_aug)         
-#     n_node = x_aug.shape[0]
-#     eps = total_edges * node_ratio/2
-#     xi = 1e-3
-    
-#     A_ = adj_aug   
-#     C_ = torch.ones_like(A_) - 2 * A_ - torch.eye(A_.shape[0],device=device)
-#     S_ = torch.zeros_like(A_, requires_grad= True)
-    
-#     mask = torch.ones_like(A_)
-#     mask = mask - torch.tril(mask)
-
-#     delta = torch.zeros_like(x_aug, device=device, requires_grad=True)
-
-#     # if principal_components is not None:
-#     #   rand_coeffs = torch.randn(x_2.shape[0], principal_components.shape[0], device=device)
-#     #   delta_init = torch.matmul(rand_coeffs, principal_components)
-#     #   delta_init = delta_init.sign() * 0.04
-#     #   delta = delta_init.clone().detach().requires_grad_(True)
-      
-#     # adj_1 = edge2adj(x_1, edge_index_1)
-#     model.to(device)
-#     # adj_sub_edge_ind = dense_to_sparse(adj_sub)
-
-#     # discretized_S_ = torch.zeros_like(S_)
-
-#     for itr in range(iters):
-#         S = (S_ * mask)
-#         S = S + S.T
-#         # S = S_
-#         A_prime = A_ + (S * C_)
-#         # A_prime = torch.clamp(A_prime, min = 0)
-#         adj_hat = A_prime + torch.eye(n_node,device=device)
-#         adj_hat_clamped = torch.clamp(adj_hat, 0, 1)
-#         # adj_hat_clamped = (adj_hat_clamped + adj_hat_clamped.t()) / 2
-#         # check_is_strictly_binary(adj_hat_clamped)
-#         # inspect_fractional_values(adj_hat_clamped)
-#         # adj_hat_edge_ind = dense_to_sparse(adj_hat_clamped)
-#         # sub_edge_index, sub_edge_weight = dense_to_differentiable_sparse(adj_sub)
-#         # z1 = model(x_sub, sub_edge_index, sub_edge_weight)
-#         assert torch.equal(adj_sub, adj_sub.transpose(0,1))
-#         z1 = model(x_sub, adj_sub)
-#         # print(adj_hat_clamped)
-#         # attk_edgeind, attk_edge_weight = dense_to_differentiable_sparse(adj_hat_clamped)
-#         # z2 = model(x_aug + delta, attk_edgeind, attk_edge_weight) 
-#         # z2 = model(x_aug + delta, adj_hat_clamped, None)
-#         # assert torch.equal(adj_hat_clamped, adj_hat_clamped.transpose(0,1))
-#         z2 = model(x_aug + delta, adj_hat_clamped)
-#         Attackloss = model.loss(z1, z2, batch_size=0) 
-#         Attackloss.backward()
-#         # import pdb; pdb.set_trace()
-#         # Modified
-#         torch.nn.utils.clip_grad_norm_(S_, max_norm=0.5)
-#         torch.nn.utils.clip_grad_norm_(delta, max_norm=0.5)
-#         # Modified
-#         S_.data = (S_.data + alpha/np.sqrt(itr+1)*S_.grad.detach()) # annealing
-#         S_.data = bisection(S_.data, eps, xi) # clip S
-#         S_.grad.zero_()
-        
-#         delta.data = (delta.data + beta*delta.grad.detach().sign()).clamp(-0.04,0.04)        
-#         delta.grad.zero_()
-
-#         randm = torch.rand(n_node, n_node,device=device)
-#         discretized_S = torch.where(S_.detach() > randm, torch.ones(n_node, n_node,device=device), torch.zeros(n_node, n_node, device=device))
-#         discretized_S = discretized_S * mask 
-#         discretized_S = discretized_S + discretized_S.T
-#         A_hat = A_ + discretized_S * C_ + torch.eye(n_node,device=device)
-#         # check_is_strictly_binary(A_hat)
-        
-#     for param in model.parameters():
-#         param.requires_grad = True
-#     model.train()
-#     x_hat = x_aug + delta.data.to(device)
-#     # A_hat_clamped = A_hat + torch.eye(n_node,device=device)
-#     A_hat_clamped = torch.clamp(A_hat, 0, 1)
-#     check_is_strictly_binary(A_hat_clamped)
-#     # inspect_fractional_values(A_hat_clamped)
-#     # assert torch.equal(A_hat_clamped, A_hat_clamped.transpose(0,1))
-#     return A_hat_clamped, x_hat
 
 def GraphAdversarialAttack(model, adj_sub, adj_aug, x_sub, x_aug, iters, node_ratio, alpha, beta, principal_components):
     """ PGD attack on both features and edges"""
@@ -489,78 +330,27 @@ def GraphAdversarialAttack(model, adj_sub, adj_aug, x_sub, x_aug, iters, node_ra
     n_node = x_aug.shape[0]
     eps = total_edges * node_ratio/2
     xi = 1e-3
-    
-    # A_ = adj_aug   
-    # C_ = torch.ones_like(A_) - 2 * A_ - torch.eye(A_.shape[0],device=device)
-    # S_ = torch.zeros_like(A_, requires_grad= True)
-    
-    # mask = torch.ones_like(A_)
-    # mask = mask - torch.tril(mask)
 
     delta = torch.zeros_like(x_aug, device=device, requires_grad=True)
-
-    # if principal_components is not None:
-    #   rand_coeffs = torch.randn(x_2.shape[0], principal_components.shape[0], device=device)
-    #   delta_init = torch.matmul(rand_coeffs, principal_components)
-    #   delta_init = delta_init.sign() * 0.04
-    #   delta = delta_init.clone().detach().requires_grad_(True)
       
-    # adj_1 = edge2adj(x_1, edge_index_1)
     model.to(device)
-    # adj_sub_edge_ind = dense_to_sparse(adj_sub)
-
-    # discretized_S_ = torch.zeros_like(S_)
 
     for itr in range(iters):
-        # S = (S_ * mask)
-        # S = S + S.T
-        # # S = S_
-        # A_prime = A_ + (S * C_)
-        # A_prime = torch.clamp(A_prime, min = 0)
-        # adj_hat = A_prime + torch.eye(n_node,device=device)
-        # adj_hat_clamped = torch.clamp(adj_hat, 0, 1)
-        # adj_hat_clamped = (adj_hat_clamped + adj_hat_clamped.t()) / 2
-        # check_is_strictly_binary(adj_hat_clamped)
-        # inspect_fractional_values(adj_hat_clamped)
-        # adj_hat_edge_ind = dense_to_sparse(adj_hat_clamped)
-        # sub_edge_index, sub_edge_weight = dense_to_differentiable_sparse(adj_sub)
-        # z1 = model(x_sub, sub_edge_index, sub_edge_weight)
         z1 = model(x_sub, adj_sub)
-        # print(adj_hat_clamped)
-        # attk_edgeind, attk_edge_weight = dense_to_differentiable_sparse(adj_hat_clamped)
-        # z2 = model(x_aug + delta, attk_edgeind, attk_edge_weight) 
-        # z2 = model(x_aug + delta, adj_hat_clamped, None)
-        # z2 = model(x_aug + delta, adj_hat_clamped)
         z2 = model(x_aug + delta, adj_aug)
         Attackloss = model.loss(z1, z2, batch_size=0) 
         Attackloss.backward()
-        # import pdb; pdb.set_trace()
         # Modified
         # torch.nn.utils.clip_grad_norm_(S_, max_norm=1.0)
         torch.nn.utils.clip_grad_norm_(delta, max_norm=0.5)
-        # Modified
-        # S_.data = (S_.data + alpha/np.sqrt(itr+1)*S_.grad.detach()) # annealing
-        # S_.data = bisection(S_.data, eps, xi) # clip S
-        # S_.grad.zero_()
         
         delta.data = (delta.data + beta*delta.grad.detach().sign()).clamp(-0.04,0.04)        
         delta.grad.zero_()
-
-        # randm = torch.rand(n_node, n_node,device=device)
-        # discretized_S = torch.where(S_.detach() > randm, torch.ones(n_node, n_node,device=device), torch.zeros(n_node, n_node, device=device))
-        # discretized_S = discretized_S + discretized_S.T
-        # A_hat = A_ + discretized_S * C_ + torch.eye(n_node,device=device)
-        # check_is_strictly_binary(A_hat)
         
     for param in model.parameters():
         param.requires_grad = True
     model.train()
     x_hat = x_aug + delta.data.to(device)
-    # assert torch.equal(A_hat, A_hat.transpose(0,1))
-    # A_hat_clamped = A_hat + torch.eye(n_node,device=device)
-    # A_hat_clamped = torch.clamp(A_hat_clamped, 0, 1)
-    # check_is_strictly_binary(A_hat_clamped)
-    # inspect_fractional_values(A_hat_clamped)
     adj_aug = torch.clamp(adj_aug, 0, 1)
     return adj_aug, x_hat
     # return A_hat_clamped, x_hat
@@ -616,48 +406,3 @@ def InitClusterCenters(embedding, num_cluster, device):
     # cluster_centers = torch.stack(cluster_centers, dim=0).to(device)
 
     return cluster_centers
-
-def check_is_strictly_binary(matrix):
-    # Lấy các giá trị duy nhất trong ma trận
-    unique_vals = torch.unique(matrix)
-    
-    # print(f"--- STRICT CHECK ---")
-    # print(f"Các giá trị duy nhất trong ma trận: {unique_vals}")
-    
-    # Kiểm tra xem tất cả phần tử có phải là 0 HOẶC 1 không
-    is_binary = torch.all((matrix == 0) | (matrix == 1))
-    
-    if not is_binary:
-        print("KẾT LUẬN: Ma trận KHÔNG PHẢI nhị phân (chứa số thực ở giữa).")
-        # In ra số lượng phần tử "lai tạp"
-        fractional_count = ((matrix > 0) & (matrix < 1) | (matrix > 1)).sum().item()
-        print(f"Số lượng phần tử khác 0 và 1: {fractional_count}")
-    # print("--------------------")
-
-
-def inspect_fractional_values(matrix):
-    # Lọc ra các giá trị > 0 và < 1 (không phải 0, cũng chẳng phải 1)
-    mask = (matrix > 0) & (matrix < 1) & (matrix > 1)
-    fractional_values = matrix[mask]
-    
-    if fractional_values.numel() > 0:
-        print(f"--- PGD REALITY CHECK ---")
-        print(f"Phát hiện {fractional_values.numel()} cạnh có trọng số thực (weighted edges)!")
-        print(f"Min (khác 0): {fractional_values.min().item():.6f}")
-        print(f"Max (khác 1): {fractional_values.max().item():.6f}")
-        print(f"Mean: {fractional_values.mean().item():.6f}")
-        print(f"10 giá trị mẫu ngẫu nhiên: {fractional_values[:10].tolist()}")
-        print("-------------------------")
-    else:
-        print("Ma trận sạch, không có giá trị phân số.")
-
-def dense_to_differentiable_sparse(dense_adj):
-    device = dense_adj.device
-    N = dense_adj.size(0)
-
-    rows = torch.arange(N, device=device).repeat_interleave(N)
-    cols = torch.arange(N, device=device).repeat(N)
-    edge_ind = torch.stack([rows, cols], dim=0)
-
-    edge_weight = dense_adj.contiguous().view(-1)
-    return edge_ind, edge_weight
