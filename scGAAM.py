@@ -133,7 +133,7 @@ if __name__ == '__main__':
         print(f'Version Not Topo-attack & ReLU activation', file=f)
         # print(f'Ablation study: SimpleGNNEncoder', file=f)
     
-    embeddings, pred = Train(data_file, model, data, cellGraph, device, num_epochs,lam, num_cluster,alpha, beta, num_itersAdv, optimizer, edge_r1, edge_r2, feature_r1, feature_r2, subgraph_size, output_file, principal_components=None)
+    embeddings, pred = Train(model, data, cellGraph, device, num_epochs,lam, num_cluster,alpha, beta, num_itersAdv, optimizer, edge_r1, edge_r2, feature_r1, feature_r2, subgraph_size)
 
     X=data.x
     full_edgeind = data.edge_index.to(device)

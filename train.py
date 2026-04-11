@@ -17,7 +17,7 @@ import torch.nn.functional as F
 
 torch.set_printoptions(threshold=float('inf'))
 
-def Train(data_file, scAGCLmodel, data, cellGgraph, device, num_epochs, lam, num_cluster, alpha, beta, iters, optimizer, edge_r1, edge_r2, feature_r1, feature_r2, subgraph_size, output_file, principal_components):
+def Train(scAGCLmodel, data, cellGgraph, device, num_epochs, lam, num_cluster, alpha, beta, iters, optimizer, edge_r1, edge_r2, feature_r1, feature_r2, subgraph_size):
     #For visualize with tensorboard
     # writer = SummaryWriter(log_dir="/content/drive/MyDrive/ĐACN-ĐATN/scAGCL/visualize_tensorboard")
     start_time = t()

@@ -42,7 +42,6 @@ class GATLayerHybrid(nn.Module):
         #     self.skip_proj = nn.Linear(num_in_features, num_of_heads * num_out_features, bias=False)
         # else:
         #     self.register_parameter('skip_proj', None)
-        # --- HẾT PHẦN ĐỊNH NGHĨA ---
 
         self.leaky_ReLU = nn.LeakyReLU(0.2)
         self.softmax = nn.Softmax(dim=-1)
@@ -58,50 +57,8 @@ class GATLayerHybrid(nn.Module):
         if self.bias is not None:
             torch.nn.init.zeros_(self.bias)
 
-    def sum_edge_scores_neighborhood(self, exp_scores_per_edge, trg_nodes_index, num_of_nodes):
-        # The shape must be the same as in exp_scores_per_edge (required by scatter_add_) i.e. from E -> (E, NH)
-        trg_nodes_index_expanded = self.check_shape(trg_nodes_index, exp_scores_per_edge)
-
-        # shape = (N, NH), where N is the number of nodes and NH the number of attention heads
-        size = list(exp_scores_per_edge.shape)
-        size[self.nodes_dim] = num_of_nodes
-        neighborhood_sum = torch.zeros(size, dtype=exp_scores_per_edge.dtype, device=exp_scores_per_edge.device)
-
-        # position i will contain a sum of exp scores of all the nodes that point to the node i (as dictated by the
-        # target index)
-        neighborhood_sum.scatter_add_(self.nodes_dim, trg_nodes_index_expanded, exp_scores_per_edge)
-
-        # Expand again so that we can use it as a softmax denominator. e.g. node i's sum will be copied to
-        # all the locations where the source nodes pointed to i (as dictated by the target index)
-        # shape = (N, NH) -> (E, NH)
-        return neighborhood_sum.index_select(self.nodes_dim, trg_nodes_index)
-    
-
-    def aggregate_neighbors(self, nodes_features_proj_lifted_weighted, edge_index, in_nodes_features, num_of_nodes):
-        size = list(nodes_features_proj_lifted_weighted.shape)  # convert to list otherwise assignment is not possible
-        size[self.nodes_dim] = num_of_nodes  # shape = (N, NH, FOUT)
-        out_nodes_features = torch.zeros(size, dtype=in_nodes_features.dtype, device=in_nodes_features.device)
-
-        # shape = (E) -> (E, NH, FOUT)
-        trg_nodes_index_expanded = self.check_shape(edge_index[self.trg_nodes_dim], nodes_features_proj_lifted_weighted)
-
-        # aggregation step - we accumulate projected, weighted node features for all the attention heads
-        # shape = (E, NH, FOUT) -> (N, NH, FOUT)
-        out_nodes_features.scatter_add_(self.nodes_dim, trg_nodes_index_expanded, nodes_features_proj_lifted_weighted)
-
-        return out_nodes_features
-
-
-    def check_shape(self, this, other):
-        # Append singleton dimension until this.dim() == other.dim()
-        for _ in range(this.dim(), other.dim()):
-            this = this.unsqueeze(-1)
-
-        # Explicitly expand so that shapes are the same
-        return this.expand_as(other)
-
     def forward(self, x, graph, edge_weight=None):
-        # x shape = (N, Fin), graph có thể là (N, N) hoặc (2, E)
+        # x shape = (N, Fin), graph shape = (N, N) or (2, E)
         num_nodes = x.shape[0]
 
         # x = self.dropout(x)
@@ -133,7 +90,6 @@ class GATLayerHybrid(nn.Module):
             # out shape: [N, NH]
             indices_transposed = torch.stack([trg_nodes_index, src_nodes_index])
             sparse_logits = torch.sparse_coo_tensor(
-                # edge_index, 
                 indices_transposed,
                 scores_per_edge, 
                 (num_nodes, num_nodes, self.num_of_heads)
