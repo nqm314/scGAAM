@@ -28,13 +28,13 @@ if __name__ == '__main__':
     parser.add_argument('--data_file', type=str, default='Pollen.h5')
     parser.add_argument('--num_cluster', type=int, default=8)
     parser.add_argument('--lam', type=float, default=1.0)
-    parser.add_argument('--gam', type=float, default=5.0)
+    # parser.add_argument('--gam', type=float, default=5.0)
     parser.add_argument('--subgraph_size', type=int, default=400) # 400
-    parser.add_argument('--learning_rate', type=float, default=0.001)
+    parser.add_argument('--learning_rate', type=float, default=0.0005)
     parser.add_argument('--tau', type=float, default=0.5)
-    parser.add_argument('--random_seed', type=int, default=12345)   
+    parser.add_argument('--random_seed', type=int, default=11111)   
     parser.add_argument('--num_epochs', type=int, default=500)
-    parser.add_argument('--num_epochs_ft', type=int, default=300)   
+    # parser.add_argument('--num_epochs_ft', type=int, default=300)
     parser.add_argument('--num_itersAdv', type=int, default=10)
     parser.add_argument('--attention_chunk_size', type=int, default=1024,
                         help='Process dense attention rows in blocks to reduce GPU memory. Set 0 to disable chunking.')
@@ -69,12 +69,12 @@ if __name__ == '__main__':
     data_file=args.data_file
     num_cluster=args.num_cluster
     lam = args.lam #adversarial weight
-    gam = args.gam #finetuning weight
+    # gam = args.gam #finetuning weight
     subgraph_size=args.subgraph_size
     learning_rate=args.learning_rate
 
     num_epochs = args.num_epochs
-    num_epochs_ft = args.num_epochs_ft
+    # num_epochs_ft = args.num_epochs_ft
     num_itersAdv=args.num_itersAdv
     attention_chunk_size = args.attention_chunk_size
     random_seed=args.random_seed
