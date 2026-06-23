@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.12%2B-blue)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.11%2B-ee4c2c)](https://pytorch.org/)
 
-This repository contains the official implementation of **scGAAM**, a novel deep learning framework for single-cell RNA-seq (scRNA-seq) data clustering. This paper has been accepted at **SOMET 2026**.
+This repository contains the official implementation of **scGAAM**, a novel deep learning framework for single-cell RNA-seq (scRNA-seq) data clustering. This paper has been accepted at **SOMET 2026** (Conference Rank C, papers will be included in proceedings of Book series: Frontiers in Artificial Intelligence and Applications - Q4, CiteScore 0.8).
 
 ## 📖 Abstract
 Single-cell RNA sequencing (scRNA-seq) technologies provide the ability to analyze biological mechanisms at the cellular level. Separating cells into clusters of cell types is a key task in single-cell data analysis. Although recent studies have leveraged the strengths of deep learning techniques, the high dimensionality and noise in the data still pose significant research challenges. 
@@ -104,4 +104,3 @@ This repository is built upon several excellent open-source works. We would like
 *   [ARIEL](https://github.com/Shengyu-Feng/ARIEL)
 *   [pytorch-GAT](https://github.com/gordicaleksa/pytorch-GAT)
 *   [scziDesk](https://github.com/xuebaliang/scziDesk)
-```
