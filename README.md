@@ -35,11 +35,11 @@ We recommend using a virtual environment (e.g., Conda) to run scGAAM.
 
 ```bash
 # Create a new conda environment
-conda create -n scgaam python=3.9 -y
-conda activate scgaam
+conda create -n scGAAM python=3.12 -y
+conda activate scGAAM
 
 # Install PyTorch & PyTorch Geometric (Adjust CUDA version to match your hardware)
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 pip install torch_geometric
 
 # Install other dependencies
@@ -91,12 +91,12 @@ If you find our work or this code useful in your research, please consider citin
 ```bibtex
 @inproceedings{scGAAM2026,
   title={Single-cell RNA-seq Clustering with Adversarial attack and Attention mechanism},
-  author={Your Name and Co-authors},
-  booktitle={Proceedings of the International Conference on Software Engineering and Knowledge Engineering (SOMET)},
+  author={Quang-Minh Nguyen, Hoang-Quan Do, Xuan-Quyet Dinh, Van-Vinh Le, Van-Hoai Tran},
+  booktitle={Proceedings of the International Conference on Intelligent Software Methodologies, Tools, and Techniques (SOMET)},
   year={2026}
 }
 ```
-*(Please update the author list and citation details once the official proceedings are published).*
+*(The author list and citation details will be updated once the official proceedings are published).*
 
 ## 🙏 Acknowledgements
 This repository is built upon several excellent open-source works. We would like to express our gratitude to the authors of:
@@ -105,8 +105,3 @@ This repository is built upon several excellent open-source works. We would like
 *   [pytorch-GAT](https://github.com/gordicaleksa/pytorch-GAT)
 *   [scziDesk](https://github.com/xuebaliang/scziDesk)
 ```
-
-### 💡 Tips for Finalizing:
-1.  **Image upload:** Be sure to create a folder called `images` in your repository, save the architecture diagram from your PDF as `architecture.png`, and upload it there so the image in the README renders correctly.
-2.  **Authors list:** Update the `@inproceedings` BibTeX placeholder with the real author names.
-3.  **Create result dir:** You might want to ensure a `result` directory exists, or add a quick `os.makedirs('./result/', exist_ok=True)` in your python script to prevent errors during logging.
